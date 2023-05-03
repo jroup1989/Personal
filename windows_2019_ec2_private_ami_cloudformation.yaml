@@ -1,0 +1,213 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  InstanceTypeParameter:
+    Type: String
+    Default: t2.medium
+    Description: Enter instance size. Default is t2.medium
+    AllowedValues:
+      - t2.medium
+      - t2.large
+      - m1.medium
+      - m1.large
+      - m1.xlarge
+      - m2.xlarge
+      - m2.2xlarge
+      - m2.4xlarge
+      - m3.medium
+      - m3.large
+      - m3.xlarge
+      - m3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+      - m4.10xlarge
+      - c1.medium
+      - c1.xlarge
+      - c3.large
+  AMI:
+    Type: String
+    Default: ami-013836026f26a31fd
+    Description: The Windows AMI to use. Default is Private Windows 2019
+    AllowedValues:
+      - ami-013836026f26a31fd
+
+  Key:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: The key used to access the instance.
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  AppSG:
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Application Security Group
+    AllowedValues: 
+      - /sg/app
+    Default: /sg/app
+
+  AppSubnet:
+    Type: AWS::SSM::Parameter::Value<List<String>>
+    Description: Select subnet ID for where EC2 instance will be deployed
+    AllowedValues:
+      - /subnets/app
+    Default: /subnets/app
+  
+  Secretremotelogin1:
+    Type: String
+    Default: /ec2/windows/remotelogin1
+
+  Secretremotelogin2:
+    Type: String
+    Default: /ec2/windows/remotelogin2
+
+  InstanceName:
+    Type: String
+    Description: Provides a name to your Ec2 instance
+
+  CloudWatchAgentConfig:
+    Type: String
+    Default: "{\n\t\"logs\": {\n\t\t\"logs_collected\": {\n\t\t\t\"windows_events\": {\n\t\t\t\t\"collect_list\": [\n\t\t\t\t\t{\n\t\t\t\t\t\t\"event_format\": \"xml\",\n\t\t\t\t\t\t\"event_levels\": [\n\t\t\t\t\t\t\t\"VERBOSE\",\n\t\t\t\t\t\t\t\"INFORMATION\",\n\t\t\t\t\t\t\t\"WARNING\",\n\t\t\t\t\t\t\t\"ERROR\",\n\t\t\t\t\t\t\t\"CRITICAL\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"event_name\": \"Security\",\n\t\t\t\t\t\t\"log_group_name\": \"Windows_EC2_Security_eventviewer_logs\",\n\t\t\t\t\t\t\"log_stream_name\": \"{instance_id}\",\n\t\t\t\t\t\t\"retention_in_days\": 7\n\t\t\t\t\t},\n\t\t\t\t\t{\n\t\t\t\t\t\t\"event_format\": \"xml\",\n\t\t\t\t\t\t\"event_levels\": [\n\t\t\t\t\t\t\t\"VERBOSE\",\n\t\t\t\t\t\t\t\"INFORMATION\",\n\t\t\t\t\t\t\t\"WARNING\",\n\t\t\t\t\t\t\t\"ERROR\",\n\t\t\t\t\t\t\t\"CRITICAL\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"event_name\": \"System\",\n\t\t\t\t\t\t\"log_group_name\": \"Windows_EC2_System_eventviewer_logs\",\n\t\t\t\t\t\t\"log_stream_name\": \"{instance_id}\",\n\t\t\t\t\t\t\"retention_in_days\": 7\n\t\t\t\t\t},\n\n\t\t\t\t\t{\n\t\t\t\t\t\t\"event_format\": \"xml\",\n\t\t\t\t\t\t\"event_levels\": [\n\t\t\t\t\t\t\t\"VERBOSE\",\n\t\t\t\t\t\t\t\"INFORMATION\",\n\t\t\t\t\t\t\t\"WARNING\",\n\t\t\t\t\t\t\t\"ERROR\",\n\t\t\t\t\t\t\t\"CRITICAL\"\n\t\t\t\t\t\t],\n\t\t\t\t\t\t\"event_name\": \"Application\",\n\t\t\t\t\t\t\"log_group_name\": \"Windows_EC2_Application_eventviewer_logs\",\n\t\t\t\t\t\t\"log_stream_name\": \"{instance_id}\",\n\t\t\t\t\t\t\"retention_in_days\": 7\n\t\t\t\t\t}\n\t\t\t\t]\n\t\t\t}\n\t\t}\n\t},\n\t\"metrics\": {\n\t\t\"aggregation_dimensions\": [\n\t\t\t[\n\t\t\t\t\"InstanceId\"\n\t\t\t]\n\t\t],\n\t\t\"append_dimensions\": {\n\t\t\t\"AutoScalingGroupName\": \"${aws:AutoScalingGroupName}\",\n\t\t\t\"ImageId\": \"${aws:ImageId}\",\n\t\t\t\"InstanceId\": \"${aws:InstanceId}\",\n\t\t\t\"InstanceType\": \"${aws:InstanceType}\"\n\t\t},\n\t\t\"metrics_collected\": {\n\t\t\t\"LogicalDisk\": {\n\t\t\t\t\"measurement\": [\n\t\t\t\t\t\"% Free Space\"\n\t\t\t\t],\n\t\t\t\t\"metrics_collection_interval\": 60,\n\t\t\t\t\"resources\": [\n\t\t\t\t\t\"*\"\n\t\t\t\t]\n\t\t\t},\n\t\t\t\"Memory\": {\n\t\t\t\t\"measurement\": [\n\t\t\t\t\t\"% Committed Bytes In Use\"\n\t\t\t\t],\n\t\t\t\t\"metrics_collection_interval\": 60\n\t\t\t},\n\t\t\t\"statsd\": {\n\t\t\t\t\"metrics_aggregation_interval\": 60,\n\t\t\t\t\"metrics_collection_interval\": 60,\n\t\t\t\t\"service_address\": \":8125\"\n\t\t\t}\n\t\t}\n\t}\n}"
+ 
+
+Resources:
+
+  CloudWatchLogGroupSecuritylogs:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: Windows_EC2_Security_eventviewer_logs
+      RetentionInDays: 7
+
+  CloudWatchLogGroupSystemlogs:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: Windows_EC2_System_eventviewer_logs
+      RetentionInDays: 7
+
+  CloudWatchLogGroupApplicationlogs:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: Windows_EC2_Application_eventviewer_logs
+      RetentionInDays: 7
+ 
+  CloudWatchAgentConfiguration:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Creates Parameter Store Cloud Watch Agent configuration
+      Name: /cloudformation/cloudwatch/agent/configuration/windows/windows2019
+      Type: String
+      Value: !Ref CloudWatchAgentConfig
+
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: 
+               Service:
+                 - ec2.amazonaws.com
+                 - cloudwatch.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: Role Is attached to EC2 instance as part of Autoscale Group
+      Policies:
+        - PolicyName: EmbeddedInlinePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - 'ec2:*'
+                  - 'cloudwatch:*'
+                  - 'sns:*'
+                  - 'secretsmanager:*'
+                Resource: '*'
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+      RoleName: Windows2019EC2Role
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: Windows2019EC2Role
+      Path: /
+      Roles: 
+        - !Ref EC2InstanceRole
+    DependsOn: 
+        - EC2InstanceRole
+
+  SecretforRemotelogin1:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Description: Create password for Remotelogin1 user
+      Name: /ec2/windows/remotelogin1
+      GenerateSecretString:
+        ExcludeCharacters: ' %+~`#$&*()|[]{}:;<>?!''/@"\'
+        SecretStringTemplate: '{"username":"remotelogin1"}'
+        GenerateStringKey: Password
+        PasswordLength: 15
+  
+  SecretforRemotelogin2:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Description: Create password for Remotelogin2 user
+      Name: /ec2/windows/remotelogin2
+      GenerateSecretString:
+        ExcludeCharacters: ' %+~`#$&*()|[]{}:;<>?!''/@"\'
+        SecretStringTemplate: '{"username":"remotelogin2"}'
+        GenerateStringKey: Password
+        PasswordLength: 15
+
+  
+  Windows:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceTypeParameter
+      KeyName: !Ref Key
+      SubnetId: !Select [0, !Ref AppSubnet]
+      SecurityGroupIds: 
+         - !Ref AppSG
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 100
+      IamInstanceProfile: !Ref InstanceProfile
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+      UserData:
+        Fn::Base64: !Sub |
+            <powershell>
+            $SecretName1 = "${Secretremotelogin1}"
+            $SecretValue1 = (ConvertFrom-Json -InputObject (Get-SECSecretValue -SecretId "$SecretName1" ).SecretString).Password
+            $Secret1 = convertto-securestring "$SecretValue1" -asplaintext -force
+            $SecretName2 = "${Secretremotelogin2}"
+            $SecretValue2 = (ConvertFrom-Json -InputObject (Get-SECSecretValue -SecretId "$SecretName2" ).SecretString).Password
+            $Secret2 = convertto-securestring "$SecretValue2" -asplaintext -force
+            New-LocalUser "remotelogin1" -Password $Secret1 -FullName "remotelogin1" -Description "Administrator" -PasswordNeverExpires 
+            New-LocalUser "remotelogin2" -Password $Secret2  -FullName "remotelogin2" -Description "Administrator" -PasswordNeverExpires
+            Add-LocalGroupMember -Group "Administrators" -Member "remotelogin1","remotelogin2"
+            Add-LocalGroupMember -Group "Remote Desktop Users" -Member "remotelogin1","remotelogin2"
+            Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -value 0
+            Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+            New-Item -Path 'C:\amazoncloudwatch' -ItemType Directory
+            Set-Location -Path "C:\amazoncloudwatch"
+            $URL = "https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/amazon-cloudwatch-agent.msi"
+            $Path = "C:\amazoncloudwatch\amazon-cloudwatch-agent.msi"
+            Invoke-WebRequest -URI $URL -OutFile $Path
+            msiexec /i amazon-cloudwatch-agent.msi
+            Start-Sleep -Seconds 30
+            & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a fetch-config -m ec2 -s -c ssm:/cloudformation/cloudwatch/agent/configuration/windows/windows2019
+            </powershell>
+    DependsOn: 
+      - SecretforRemotelogin1
+      - SecretforRemotelogin2
+
+Outputs:
+  InstanceID:
+   Description: Returns InstanceID of newly created EC2 instance
+   Value: !Ref Windows

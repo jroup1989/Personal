@@ -1,0 +1,12 @@
+---
+
+- name: Recycle Windows Service
+  hosts: all
+  tasks: 
+
+# restarts a window service. Windows service would be added into template as part of a survey. This allows scalability with limited coding. 
+  - name: Recycle windows service
+    win_service: 
+      name: "{{nameofwindowsservice}}"
+      state: restarted
+
